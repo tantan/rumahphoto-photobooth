@@ -98,6 +98,38 @@ async def print_image(request: PrintRequest):
         physical_width = hDC.GetDeviceCaps(110) # PHYSICALWIDTH
         physical_height = hDC.GetDeviceCaps(111) # PHYSICALHEIGHT
         
+        # --- LOGIKA SMART CROP (ANTI DISTORSI) ---
+        img_width, img_height = img.size
+        
+        # 1. Samakan orientasi (Portrait/Landscape) agar tidak banyak terpotong
+        is_printer_landscape = physical_width > physical_height
+        is_img_landscape = img_width > img_height
+        
+        if is_printer_landscape != is_img_landscape:
+            # Putar gambar 90 derajat
+            img = img.rotate(90, expand=True)
+            img_width, img_height = img.size
+            
+        # 2. Hitung rasio
+        printer_ratio = physical_width / physical_height
+        img_ratio = img_width / img_height
+        
+        # 3. Center Crop
+        if img_ratio > printer_ratio:
+            # Gambar terlalu lebar, potong kiri & kanan
+            new_width = int(printer_ratio * img_height)
+            offset = (img_width - new_width) // 2
+            img = img.crop((offset, 0, offset + new_width, img_height))
+        else:
+            # Gambar terlalu tinggi, potong atas & bawah
+            new_height = int(img_width / printer_ratio)
+            offset = (img_height - new_height) // 2
+            img = img.crop((0, offset, img_width, offset + new_height))
+            
+        # Update DIB dengan gambar yang sudah di-crop
+        dib = ImageWin.Dib(img)
+        
+        # Gambar di kanvas printer (sekarang rasionya sudah 1:1 persis dengan kertas)
         dib.draw(hDC.GetHandleOutput(), (0, 0, physical_width, physical_height))
         
         hDC.EndPage()
