@@ -4,6 +4,8 @@ import AdminPanel from './components/AdminPanel'
 import QRCode from 'react-qr-code'
 import { Settings, Camera as CameraIcon, Wand2, RefreshCw, CheckCircle2, ChevronRight } from 'lucide-react'
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+
 function App() {
   const [mode, setMode] = useState(null)
   const [photoData, setPhotoData] = useState(null)
@@ -41,7 +43,7 @@ function App() {
       setHsvUpper(savedUpper);
 
       // Ambil daftar background dari server
-      fetch('http://localhost:8000/backgrounds')
+      fetch(`${BACKEND_URL}/backgrounds`)
         .then(res => res.json())
         .then(data => {
           setAvailableBgs(data.backgrounds || []);
@@ -66,7 +68,7 @@ function App() {
     setIsProcessing(true)
 
     try {
-      const response = await fetch('http://localhost:8000/process-image', {
+      const response = await fetch(`${BACKEND_URL}/process-image`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

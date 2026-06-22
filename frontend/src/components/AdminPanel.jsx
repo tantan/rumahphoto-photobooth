@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Settings, Key, Printer, Wand2, Image as ImageIcon, Palette, Save, X, Trash2, Plus } from 'lucide-react';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+
 export default function AdminPanel({ onClose }) {
   const [paperSize, setPaperSize] = useState('4R');
   const [apiKey, setApiKey] = useState('');
@@ -68,7 +70,7 @@ export default function AdminPanel({ onClose }) {
 
   // --- BACKGROUND UPLOAD LOGIC ---
   useEffect(() => {
-    fetch('http://localhost:8000/backgrounds')
+    fetch(`${BACKEND_URL}/backgrounds`)
       .then(res => res.json())
       .then(data => setBackgrounds(data.backgrounds || []))
       .catch(err => console.error(err));
@@ -80,7 +82,7 @@ export default function AdminPanel({ onClose }) {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await fetch('http://localhost:8000/upload-background', {
+      const res = await fetch(`${BACKEND_URL}/upload-background`, {
         method: 'POST',
         body: formData
       });
@@ -93,7 +95,7 @@ export default function AdminPanel({ onClose }) {
 
   const handleDeleteBg = async (filename) => {
     try {
-      await fetch(`http://localhost:8000/backgrounds/${filename}`, { method: 'DELETE' });
+      await fetch(`${BACKEND_URL}/backgrounds/${filename}`, { method: 'DELETE' });
       setBackgrounds(backgrounds.filter(bg => bg.filename !== filename));
     } catch (err) {
       alert("Gagal menghapus background.");
