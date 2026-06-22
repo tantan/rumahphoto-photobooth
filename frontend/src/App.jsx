@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Camera from './components/Camera'
 import AdminPanel from './components/AdminPanel'
 import QRCode from 'react-qr-code'
-import { Settings, Camera as CameraIcon, Wand2, RefreshCw, CheckCircle2, ChevronRight } from 'lucide-react'
+import { Settings, Camera as CameraIcon, Wand2, RefreshCw, CheckCircle2, ChevronRight, Printer } from 'lucide-react'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
@@ -12,7 +12,9 @@ function App() {
 
   // State untuk melacak proses loading backend
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isPrinting, setIsPrinting] = useState(false)
   const [finalImage, setFinalImage] = useState(null)
+  const [finalFilename, setFinalFilename] = useState(null)
   const [downloadUrl, setDownloadUrl] = useState(null)
 
   // State untuk Admin Panel
@@ -64,6 +66,23 @@ function App() {
     setFinalImage(null)
   }
 
+  const handlePrint = async (filename) => {
+    setIsPrinting(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/print`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename })
+      });
+      const data = await res.json();
+      console.log("Print Response:", data.message);
+    } catch(err) {
+      console.error("Gagal mencetak:", err);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   const handleProcess = async () => {
     setIsProcessing(true)
 
@@ -87,7 +106,14 @@ function App() {
 
       if (response.ok && data.status === "success") {
         setFinalImage(data.processed_image_base64);
+        setFinalFilename(data.filename);
         if (data.download_url) setDownloadUrl(data.download_url);
+        
+        // Auto Print Logic
+        const savedAutoPrint = localStorage.getItem('pb_autoPrint') === 'true';
+        if (savedAutoPrint && data.filename) {
+          handlePrint(data.filename);
+        }
       } else {
         alert("Gagal memproses gambar: " + (data.detail || "Error backend"));
       }
@@ -104,6 +130,7 @@ function App() {
     setMode(null)
     setPhotoData(null)
     setFinalImage(null)
+    setFinalFilename(null)
     setDownloadUrl(null)
   }
 
@@ -282,10 +309,18 @@ function App() {
 
           <div className="flex gap-6 mt-10">
             <button
+              onClick={() => handlePrint(finalFilename)}
+              disabled={isPrinting}
+              className="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-lg rounded-2xl shadow-lg transition-colors border border-slate-700 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Printer size={24} className={isPrinting ? "animate-pulse text-emerald-400" : ""} /> 
+              {isPrinting ? "Mencetak..." : "Cetak Ulang"}
+            </button>
+            <button
               onClick={handleFinish}
               className="px-10 py-4 bg-slate-100 hover:bg-white text-slate-900 font-bold text-lg rounded-2xl shadow-lg transition-transform hover:-translate-y-1"
             >
-              Kembali ke Beranda
+              Selesai
             </button>
           </div>
         </div>

@@ -6,6 +6,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 export default function AdminPanel({ onClose }) {
   const [paperSize, setPaperSize] = useState('4R');
   const [apiKey, setApiKey] = useState('');
+  const [autoPrint, setAutoPrint] = useState(false);
   const [templates, setTemplates] = useState([]);
   
   const [backgrounds, setBackgrounds] = useState([]);
@@ -23,6 +24,7 @@ export default function AdminPanel({ onClose }) {
     // Load from LocalStorage
     const savedPaper = localStorage.getItem('pb_paperSize') || '4R';
     const savedKey = localStorage.getItem('pb_apiKey') || '';
+    const savedAutoPrint = localStorage.getItem('pb_autoPrint') === 'true';
     const savedTemplates = JSON.parse(localStorage.getItem('pb_aiTemplates') || '[]');
     const savedLower = JSON.parse(localStorage.getItem('pb_hsvLower') || '[35, 43, 46]');
     const savedUpper = JSON.parse(localStorage.getItem('pb_hsvUpper') || '[85, 255, 255]');
@@ -38,9 +40,15 @@ export default function AdminPanel({ onClose }) {
 
     setPaperSize(savedPaper);
     setApiKey(savedKey);
+    setAutoPrint(savedAutoPrint);
     setHsvLower(savedLower);
     setHsvUpper(savedUpper);
   }, []);
+
+  const saveAutoPrint = (val) => {
+    setAutoPrint(val);
+    localStorage.setItem('pb_autoPrint', val.toString());
+  };
 
   const handleSave = () => {
     localStorage.setItem('pb_paperSize', paperSize);
@@ -197,21 +205,41 @@ export default function AdminPanel({ onClose }) {
           />
         </div>
 
-        {/* --- PAPER SIZE --- */}
-        <div className="mb-10">
-          <h3 className="text-xl font-bold mb-2 flex items-center gap-2 text-slate-200">
-            <Printer size={20} className="text-slate-400" /> Ukuran Cetak
-          </h3>
-          <select
-            value={paperSize}
-            onChange={(e) => setPaperSize(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-4 text-slate-200 focus:outline-none focus:border-slate-500 transition-colors"
-          >
-            <option value="4R">4R (10x15 cm)</option>
-            <option value="Strip">Photo Strip (2x6 inch)</option>
-            <option value="Square">Square (Instagram)</option>
-          </select>
-        </div>
+        {/* --- PAPER SIZE & AUTO PRINT --- */}
+        <div className="mb-10 bg-slate-800/50 p-6 rounded-2xl border border-slate-700 space-y-6">
+            <div className="flex items-center gap-3 text-lg font-semibold text-slate-200 border-b border-slate-700 pb-3">
+              <Printer className="text-emerald-400" /> Pengaturan Printer
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-400">Ukuran Kertas Default</label>
+              <select 
+                value={paperSize} 
+                onChange={e => setPaperSize(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 transition-colors"
+              >
+                <option value="4R">4R (4x6 inc)</option>
+                <option value="Strip">Photo Strip (2x6 inc)</option>
+                <option value="6R">6R (6x8 inc)</option>
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between bg-slate-900 p-4 rounded-xl border border-slate-700">
+              <div className="flex flex-col">
+                <span className="text-slate-200 font-medium">Auto Print</span>
+                <span className="text-slate-400 text-sm">Otomatis mencetak setelah foto selesai diproses</span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={autoPrint}
+                  onChange={(e) => saveAutoPrint(e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+          </div>
 
         {/* --- TEMPLATE AI --- */}
         <div className="mb-10">

@@ -55,9 +55,59 @@ class ImageProcessRequest(BaseModel):
     hsv_lower: list = [35, 43, 46]
     hsv_upper: list = [85, 255, 255]
 
+class PrintRequest(BaseModel):
+    filename: str
+
 @app.get("/")
 def read_root():
     return {"status": "ok", "message": "Photobooth AI Backend is running"}
+
+# --- ENDPOINT PRINTING ---
+
+@app.post("/print")
+async def print_image(request: PrintRequest):
+    """
+    Endpoint untuk mencetak foto secara silent menggunakan Windows Print Spooler.
+    Hanya bekerja secara native di OS Windows (diabaikan jika di Cloud/Linux).
+    """
+    filepath = os.path.join(DOWNLOADS_DIR, request.filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="File gambar tidak ditemukan di server.")
+        
+    if os.name != 'nt':
+        return {"status": "success", "message": f"Simulasi Cetak Selesai (OS bukan Windows)"}
+        
+    try:
+        import win32print
+        import win32ui
+        from PIL import ImageWin
+        
+        printer_name = win32print.GetDefaultPrinter()
+        
+        hDC = win32ui.CreateDC()
+        hDC.CreatePrinterDC(printer_name)
+        
+        img = Image.open(filepath)
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+            
+        hDC.StartDoc(filepath)
+        hDC.StartPage()
+        
+        dib = ImageWin.Dib(img)
+        physical_width = hDC.GetDeviceCaps(110) # PHYSICALWIDTH
+        physical_height = hDC.GetDeviceCaps(111) # PHYSICALHEIGHT
+        
+        dib.draw(hDC.GetHandleOutput(), (0, 0, physical_width, physical_height))
+        
+        hDC.EndPage()
+        hDC.EndDoc()
+        hDC.DeleteDC()
+        
+        return {"status": "success", "message": f"Berhasil mengirim ke {printer_name}"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gagal mencetak: {str(e)}")
 
 # --- ENDPOINT BACKGROUNDS ---
 
@@ -213,6 +263,7 @@ async def process_image(request: ImageProcessRequest):
             "status": "success", 
             "processed_image_base64": f"{prefix}{final_image_base64}",
             "download_url": download_url,
+            "filename": filename,
             "message": message
         }
             
