@@ -150,7 +150,7 @@ def list_backgrounds():
     if os.path.exists(ASSETS_BGS_DIR):
         for f in os.listdir(ASSETS_BGS_DIR):
             if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
-                url = f"http://{get_local_ip()}:8000/backgrounds-static/{f}"
+                url = f"/backgrounds-static/{f}"
                 bg_files.append({"filename": f, "url": url})
     return {"status": "success", "backgrounds": bg_files}
 
@@ -284,17 +284,13 @@ async def process_image(request: ImageProcessRequest):
         with open(filepath, "wb") as f:
             f.write(final_image_bytes)
             
-        # Buat URL Download untuk QR Code
-        local_ip = get_local_ip()
-        download_url = f"http://{local_ip}:8000/downloads/{filename}"
-        
         # Konversi kembali ke base64
         final_image_base64 = base64.b64encode(final_image_bytes).decode('utf-8')
             
         return {
             "status": "success", 
             "processed_image_base64": f"{prefix}{final_image_base64}",
-            "download_url": download_url,
+            "download_url": f"/downloads/{filename}",
             "filename": filename,
             "message": message
         }

@@ -48,9 +48,16 @@ function App() {
       fetch(`${BACKEND_URL}/backgrounds`)
         .then(res => res.json())
         .then(data => {
-          setAvailableBgs(data.backgrounds || []);
-          if (data.backgrounds && data.backgrounds.length > 0) {
-            setSelectedBg(data.backgrounds[0].filename);
+          if (data.status === "success") {
+            const bgData = data.backgrounds || []
+            // Gunakan BACKEND_URL karena backend mengembalikan path relatif
+            setAvailableBgs(bgData.map(bg => ({
+              ...bg,
+              url: `${BACKEND_URL}${bg.url}`
+            })))
+            if (bgData.length > 0) {
+              setSelectedBg(bgData[0].filename);
+            }
           }
         })
         .catch(err => console.error("Gagal load backgrounds", err));
@@ -107,7 +114,7 @@ function App() {
       if (response.ok && data.status === "success") {
         setFinalImage(data.processed_image_base64);
         setFinalFilename(data.filename);
-        if (data.download_url) setDownloadUrl(data.download_url);
+        if (data.download_url) setDownloadUrl(`${BACKEND_URL}${data.download_url}`);
         
         // Auto Print Logic
         const savedAutoPrint = localStorage.getItem('pb_autoPrint') === 'true';
