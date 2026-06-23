@@ -7,3 +7,5 @@ opencv-python-headless
 numpy
 Pillow
 pywin32; sys_platform == 'win32'
+requests
+huggingface_hub

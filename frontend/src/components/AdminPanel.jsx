@@ -306,7 +306,7 @@ export default function AdminPanel({ onClose }) {
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
             {backgrounds.map(bg => (
               <div key={bg.filename} className="relative group rounded-xl overflow-hidden border border-slate-800 aspect-[4/3]">
-                <img src={bg.url} alt={bg.filename} className="w-full h-full object-cover" />
+                <img src={bg.url.startsWith('http') ? bg.url : `${BACKEND_URL}${bg.url}`} alt={bg.filename} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                   <button
                     onClick={() => handleDeleteBg(bg.filename)}

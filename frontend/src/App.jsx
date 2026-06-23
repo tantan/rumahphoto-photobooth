@@ -91,6 +91,12 @@ function App() {
   };
 
   const handleProcess = async () => {
+    const apiKey = localStorage.getItem('pb_apiKey') || '';
+    if (mode === 'AI' && !apiKey) {
+      alert("Mohon masukkan Cloud API Key di menu Pengaturan (Admin Panel) sebelum menggunakan mode AI.");
+      return;
+    }
+    
     setIsProcessing(true)
 
     try {
@@ -105,7 +111,8 @@ function App() {
           prompt: mode === 'AI' ? selectedPrompt : '',
           background_filename: mode === 'Standard' ? selectedBg : '',
           hsv_lower: hsvLower,
-          hsv_upper: hsvUpper
+          hsv_upper: hsvUpper,
+          api_key: mode === 'AI' ? apiKey : ''
         })
       });
 

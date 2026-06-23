@@ -6,12 +6,24 @@ import asyncio
 import shutil
 import numpy as np
 import cv2
+import logging
 from io import BytesIO
 from PIL import Image, ImageOps, ImageDraw, ImageFont
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+# --- KONFIGURASI LOGGING ---
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("photobooth.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Photobooth AI Backend")
 
@@ -54,6 +66,7 @@ class ImageProcessRequest(BaseModel):
     background_filename: str = ""
     hsv_lower: list = [35, 43, 46]
     hsv_upper: list = [85, 255, 255]
+    api_key: str = ""
 
 class PrintRequest(BaseModel):
     filename: str
@@ -264,16 +277,50 @@ async def process_image(request: ImageProcessRequest):
                  message = "Tidak ada background dipilih, menggunakan foto asli."
             
         elif request.mode == "AI":
-            await asyncio.sleep(3) # Mock delay
+            if not request.api_key:
+                raise HTTPException(status_code=400, detail="API Key Hugging Face belum dimasukkan di Admin Panel.")
+                
             try:
-                img = Image.open(BytesIO(image_bytes))
-                gray_img = ImageOps.grayscale(img)
-                buffered = BytesIO()
-                gray_img.save(buffered, format="JPEG")
-                final_image_bytes = buffered.getvalue()
-                message = "AI processing simulated (Grayscale filter applied)"
+                import requests
+                
+                # Model default untuk Image-to-Image / Instruct
+                API_URL = "https://api-inference.huggingface.co/models/timbrooks/instruct-pix2pix"
+                headers = {
+                    "Authorization": f"Bearer {request.api_key}",
+                    "Content-Type": "application/json"
+                }
+                
+                # Memisahkan prefix "data:image/jpeg;base64," jika ada
+                base64_only = request.image_base64.split(",")[1] if "," in request.image_base64 else request.image_base64
+                
+                payload = {
+                    "inputs": request.prompt,
+                    "image": base64_only
+                }
+                
+                # Timeout diset 60 detik karena AI butuh waktu proses
+                response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+                
+                if response.status_code == 200:
+                    final_image_bytes = response.content
+                    message = "AI Processing Success"
+                else:
+                    error_data = response.json()
+                    if "estimated_time" in error_data:
+                        # Model sedang Cold Start
+                        wait_time = int(error_data["estimated_time"])
+                        raise HTTPException(status_code=503, detail=f"Model AI sedang dimuat oleh server Hugging Face. Harap coba lagi dalam {wait_time} detik.")
+                    else:
+                        raise Exception(f"Hugging Face Error: {error_data}")
+                        
+            except HTTPException:
+                raise
             except Exception as e:
-                message = f"Fallback to original. Error applying filter: {e}"
+                logger.error(f"Error AI Processing: {e}")
+                # Jika gagal, fallback ke gambar asli (Green Screen biasa)
+                final_image_bytes = image_bytes
+                message = f"AI Error, fallback ke original. Detail: {e}"
+                
                 
         else:
             raise HTTPException(status_code=400, detail="Unknown mode")
@@ -296,4 +343,5 @@ async def process_image(request: ImageProcessRequest):
         }
             
     except Exception as e:
+        logger.error(f"Global Error di /process-image: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
